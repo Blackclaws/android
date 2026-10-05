@@ -2651,10 +2651,9 @@ class FileDisplayActivity :
                 ignoreETag,
                 storageManager,
                 user,
-                applicationContext
-            ).apply {
-                setSyncChangedDownloadedFiles(syncChangedDownloadedFiles)
-            }.execute(
+                applicationContext,
+                syncChangedDownloadedFiles
+            ).execute(
                 account,
                 this,
                 { _, _ -> onSyncFinished() },
