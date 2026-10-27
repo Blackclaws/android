@@ -3123,34 +3123,32 @@ class FileDisplayActivity :
         val intentData = intent.data
         if (userName == null && fileId == null && intentData != null) {
             openDeepLink(intentData)
-        } else {
-            val optionalUser = if (userName == null) user else userAccountManager.getUser(userName)
-            if (optionalUser.isPresent) {
-                if (!TextUtils.isEmpty(fileId)) {
-                    openFile(optionalUser.get(), fileId)
-                } else if (!TextUtils.isEmpty(filePath)) {
-                    openFileByPath(optionalUser.get(), filePath)
-                } else {
-                    accountClicked(optionalUser.get())
-                }
-            } else {
-                SnackbarUtil.show(this, getString(R.string.associated_account_not_found))
-            }
+            return
+        }
+
+        val optionalUser = if (userName == null) user else userAccountManager.getUser(userName)
+        val targetUser = optionalUser.orElse(null) ?: run {
+            SnackbarUtil.show(this, getString(R.string.associated_account_not_found))
+            return
+        }
+
+        when {
+            !fileId.isNullOrEmpty() -> openFile(targetUser, fileId)
+            !filePath.isNullOrEmpty() -> openFileByPath(targetUser, filePath)
+            else -> accountClicked(targetUser)
         }
     }
 
     private fun openDeepLink(uri: Uri) {
-        val linkHandler = DeepLinkHandler(userAccountManager)
-        val match = linkHandler.parseDeepLink(uri)
-
-        if (match == null) {
+        val match = DeepLinkHandler(userAccountManager).parseDeepLink(uri) ?: run {
             handleDeepLink(uri)
-        } else if (match.users.isEmpty()) {
-            SnackbarUtil.show(this, getString(R.string.associated_account_not_found))
-        } else if (match.users.size == SINGLE_USER_SIZE) {
-            openFile(match.users[0], match.fileId)
-        } else {
-            selectUserAndOpenFile(match.users.toMutableList(), match.fileId)
+            return
+        }
+
+        when {
+            match.users.isEmpty() -> SnackbarUtil.show(this, getString(R.string.associated_account_not_found))
+            match.users.size == SINGLE_USER_SIZE -> openFile(match.users.first(), match.fileId)
+            else -> selectUserAndOpenFile(match.users.toMutableList(), match.fileId)
         }
     }
 
